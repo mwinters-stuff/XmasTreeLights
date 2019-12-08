@@ -58,20 +58,35 @@ NeoPatterns bar16 = NeoPatterns(5, PIN_NEOPIXEL_BAR_16, NEO_RGB + NEO_KHZ800, &a
 ESP8266DebounceSwitch switches;
 
 #define NUM_SEQUENCES  10
-#define NO_OVERRIDE 255
-uint8_t overrideState = NO_OVERRIDE;
+#define NO_OVERRIDE -1
+int8_t overrideState = NO_OVERRIDE;
+int8_t sState = -1;
 
 void onButtonPressed(uint32_t msPressed){
-#ifdef INFO
-    Serial.println("Button Pressed");
-#endif
     if(msPressed > 1000){
+#ifdef INFO
+        Serial.println("Button Override Reset");
+#endif
         overrideState = NO_OVERRIDE;
+    }else if(overrideState == NO_OVERRIDE){
+        overrideState = sState;
+
+
+#ifdef INFO
+        Serial.print("Button Overriding ");
+        Serial.println(sState);
+#endif
     }else{
+
         overrideState ++;
         if(overrideState == NUM_SEQUENCES){
             overrideState = 0;
         }
+#ifdef INFO
+        Serial.print("Button Incrementing Override ");
+        Serial.println(overrideState);
+#endif
+
     }
 }
 
@@ -251,13 +266,18 @@ void ownPatterns(NeoPatterns * aLedsPtr) {
  * Handler for all pattern
  */
 void allPatterns(NeoPatterns * aLedsPtr) {
-    static int8_t sState = 0;
 
     uint8_t tDuration = random(40, 81);
     uint8_t tColor = random(255);
 
-    if(overrideState < NO_OVERRIDE){
+    if(overrideState != NO_OVERRIDE){
+#ifdef INFO
+        Serial.print("Using Override ");
+        Serial.println(overrideState);
+#endif
         sState = overrideState;
+    }else{
+        sState++;
     }
 
 #ifdef INFO
@@ -321,7 +341,7 @@ void allPatterns(NeoPatterns * aLedsPtr) {
             FLAG_SCANNER_EXT_START_AT_BOTH_ENDS | FLAG_SCANNER_EXT_VANISH_COMPLETE);
         }
 
-        sState = -1; // Start from beginning
+        sState = 0; // Start from beginning
         break;
     default:
 #ifdef INFO
@@ -337,5 +357,4 @@ void allPatterns(NeoPatterns * aLedsPtr) {
     Serial.print(aLedsPtr->ActivePattern);
     Serial.println();
 #endif
-    sState++;
 }
