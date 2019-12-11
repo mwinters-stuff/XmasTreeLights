@@ -10,7 +10,7 @@ ESP8266DebounceSwitch switches;
 
 void onButtonPressed(uint32_t msPressed) {
   if (msPressed > 1000) {
-    treePatterns.setRandom();
+    treePatterns.resetOverride();
   } else if (!treePatterns.isOverriding()) {
     treePatterns.setOverride();
   } else {
@@ -21,6 +21,17 @@ void onButtonPressed(uint32_t msPressed) {
 void setup() {
   Serial.begin(115200);
 
+  treePatterns.addAllSequences();
+
+  ringPatterns.addSequence(SEQUENCE_CYLON);
+  ringPatterns.addSequence(SEQUENCE_RAINBOW);
+  ringPatterns.addSequence(SEQUENCE_STRIPES);
+  ringPatterns.addSequence(SEQUENCE_THEATRE_CHASE);
+  ringPatterns.addSequence(SEQUENCE_FADE);
+  ringPatterns.addSequence(SEQUENCE_COLOUR_WIPE);
+  ringPatterns.addSequence(SEQUENCE_HEARTBEATS);
+
+  treePatterns.setBeingRandom(true);
   treePatterns.begin();
   ringPatterns.begin();
 

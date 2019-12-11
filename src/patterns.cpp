@@ -13,7 +13,7 @@ void neoPatternsCallback(NeoPatterns *aLedsPtr) {
 
 Patterns::Patterns(uint8_t ledPin, uint8_t numLeds, uint8_t flags)
     : neoPatterns(numLeds, ledPin, flags,
-                  neoPatternsCallback) {
+                  neoPatternsCallback), beingRandom(false) {
   Patterns::pInstances[ledPin] = this;
 }
 
@@ -24,26 +24,48 @@ void Patterns::begin() {
 
 void Patterns::update() { neoPatterns.update(); }
 
+void Patterns::addSequence(uint8_t sequence){
+  sequences.push_back(sequence);
+}
+
+void Patterns::addAllSequences(){
+  sequences.clear();
+  addSequence(SEQUENCE_CYLON);
+  addSequence(SEQUENCE_ROCKET);
+  addSequence(SEQUENCE_FALLING_STAR);
+  addSequence(SEQUENCE_RAINBOW);
+  addSequence(SEQUENCE_STRIPES);
+  addSequence(SEQUENCE_THEATRE_CHASE);
+  addSequence(SEQUENCE_FADE);
+  addSequence(SEQUENCE_COLOUR_WIPE);
+  addSequence(SEQUENCE_ROCKET_BOTH_ENDS);
+  addSequence(SEQUENCE_HEARTBEATS);
+  addSequence(SEQUENCE_FALLING_STARS_MULTIPLE );
+  addSequence(SEQUENCE_FIRE);
+}
+
+
 void Patterns::setOverride() {
-  Serial.println("Overriding");
-  overrideState = sState;
+  Serial.print("Overriding ");
+  overrideIndex = sequenceIndex;
+  Serial.println(overrideIndex);
 }
 
 void Patterns::incrementOverride() {
-  Serial.println("Button Incrementing Override ");
+  Serial.print("Button Incrementing Override ");
 
-  overrideState++;
-  if (overrideState == NUM_SEQUENCES) {
-    overrideState = 0;
+  overrideIndex++;
+  if (overrideIndex == sequences.size()) {
+    overrideIndex = 0;
   }
+  Serial.println(overrideIndex);
 }
 
-bool Patterns::isOverriding() { return overrideState != NO_OVERRIDE; }
+bool Patterns::isOverriding() { return overrideIndex != NO_OVERRIDE; }
 
-void Patterns::setRandom() {
-  Serial.println("Random");
-
-  overrideState = NO_OVERRIDE;
+void Patterns::resetOverride() {
+  Serial.println("Reset Override");
+  overrideIndex = NO_OVERRIDE;
 }
 
 void Patterns::patternsCallback(NeoPatterns *aLedsPtr) {
@@ -51,73 +73,87 @@ void Patterns::patternsCallback(NeoPatterns *aLedsPtr) {
   uint8_t tDuration = random(40, 81);
   uint8_t tColor = random(255);
 
-  if (overrideState != NO_OVERRIDE) {
+  if (overrideIndex != NO_OVERRIDE) {
     Serial.print("Using Override ");
-    Serial.println(overrideState);
-    sState = overrideState;
+    Serial.println(overrideIndex);
+    sequenceIndex = overrideIndex;
   } else {
-    sState = random(NUM_SEQUENCES+1);
+    if(beingRandom){
+        sequenceIndex = random(sequences.size()+1);
+    }else{
+      sequenceIndex++;// = 
+      if(sequenceIndex >= sequences.size()){
+        sequenceIndex = 0;
+      }
+    }
   }
+
 
   Serial.print("Pin=");
   Serial.print(neoPatterns.getPin());
   Serial.print(" Length=");
   Serial.print(neoPatterns.numPixels());
-  Serial.print(" State=");
-  Serial.print(sState);
+  Serial.print(" ");
+  Serial.print(sequences.size());
+  Serial.print(" Index=");
+  Serial.print(sequenceIndex);
 
-  switch (sState) {
-    case 0:
+  uint8_t sequence = sequences[sequenceIndex];
+  Serial.print(" Sequence=");
+  Serial.print(sequence);
+
+  switch (sequence) {
+    case SEQUENCE_CYLON:
         // Cylon 3 times bouncing
         aLedsPtr->ScannerExtended(NeoPatterns::Wheel(tColor), 5, tDuration, 3,
         FLAG_SCANNER_EXT_CYLON | (tDuration & FLAG_SCANNER_EXT_VANISH_COMPLETE), (tColor & DIRECTION_DOWN));
         break;
-    case 1:
+    case SEQUENCE_ROCKET:
         // rocket 2 times bouncing
         aLedsPtr->ScannerExtended(NeoPatterns::Wheel(tColor), 7, tDuration, 2,
         FLAG_SCANNER_EXT_ROCKET | FLAG_SCANNER_EXT_VANISH_COMPLETE | FLAG_DO_NOT_CLEAR, (tColor & DIRECTION_DOWN));
         break;
-    case 2:
+    case SEQUENCE_FALLING_STAR:
         // 1 times rocket or falling star
         aLedsPtr->ScannerExtended(COLOR32_WHITE_HALF, 7, tDuration / 2, 0, FLAG_SCANNER_EXT_VANISH_COMPLETE,
                 (tColor & DIRECTION_DOWN));
         break;
-    case 3:
+    case SEQUENCE_RAINBOW:
         // Rainbow cycle
         aLedsPtr->RainbowCycle(tDuration / 4, (tDuration & DIRECTION_DOWN));
         break;
-    case 4:
+    case SEQUENCE_STRIPES:
         // new Stripes
         aLedsPtr->Stripes(NeoPatterns::Wheel(tColor), 5, NeoPatterns::Wheel(tColor + 0x80), 3, 2 * aLedsPtr->numPixels(),
                 tDuration * 2, (tColor & DIRECTION_DOWN));
         break;
-    case 5:
+    case SEQUENCE_THEATRE_CHASE:
         // old TheaterChase
         aLedsPtr->Stripes(NeoPatterns::Wheel(tColor), 1, NeoPatterns::Wheel(tColor + 0x80), 2, 2 * aLedsPtr->numPixels(),
                 tDuration * 2, (tColor & DIRECTION_DOWN));
         break;
-    case 6:
+    case SEQUENCE_FADE:
         // Fade to complement
         aLedsPtr->Fade(NeoPatterns::Wheel(tColor), NeoPatterns::Wheel(tColor + 0x80), 64, tDuration);
         break;
-    case 7:
+    case SEQUENCE_COLOUR_WIPE:
         // Color wipe DO_NOT_CLEAR
         aLedsPtr->ColorWipe(NeoPatterns::Wheel(tColor), tDuration, FLAG_DO_NOT_CLEAR, (tColor & DIRECTION_DOWN));
         break;
-    case 8:
+    case SEQUENCE_ROCKET_BOTH_ENDS:
         // rocket start at both end
         aLedsPtr->ScannerExtended(NeoPatterns::Wheel(tColor), 7, tDuration / 2, 3,
         FLAG_SCANNER_EXT_ROCKET | (tDuration & FLAG_SCANNER_EXT_VANISH_COMPLETE) | FLAG_SCANNER_EXT_START_AT_BOTH_ENDS);
         break;
-    case 9:
+    case SEQUENCE_HEARTBEATS:
         // 3 Heartbeats
         aLedsPtr->Heartbeat(NeoPatterns::Wheel(tColor), tDuration / 2, 3);
         break;
-    case 10:
+    case SEQUENCE_FALLING_STARS_MULTIPLE:
         // Multiple falling star
-        initMultipleFallingStars(aLedsPtr, COLOR32_WHITE_HALF, 7, tDuration, 3, &allPatternsRandomHandler);
+        initMultipleFallingStars(aLedsPtr, COLOR32_WHITE_HALF, 7, tDuration, 3, &neoPatternsCallback);
         break;
-    case 11:
+    case SEQUENCE_FIRE:
         if ((aLedsPtr->PixelFlags & PIXEL_FLAG_GEOMETRY_CIRCLE) == 0) {
             //Fire
             aLedsPtr->Fire(tDuration * 2, tDuration / 2);

@@ -4,17 +4,32 @@
 #include <Arduino.h>
 #include <NeoPatterns.h>
 #include <map>
+#include <vector>
 
-#define NUM_SEQUENCES 11
-#define NO_OVERRIDE -1
+#define NO_OVERRIDE SIZE_MAX
+
+#define SEQUENCE_CYLON 0
+#define SEQUENCE_ROCKET 1
+#define SEQUENCE_FALLING_STAR 2
+#define SEQUENCE_RAINBOW 3
+#define SEQUENCE_STRIPES 4
+#define SEQUENCE_THEATRE_CHASE 5
+#define SEQUENCE_FADE 6
+#define SEQUENCE_COLOUR_WIPE 7
+#define SEQUENCE_ROCKET_BOTH_ENDS 8
+#define SEQUENCE_HEARTBEATS 9
+#define SEQUENCE_FALLING_STARS_MULTIPLE 10
+#define SEQUENCE_FIRE 11
 
 class Patterns{
   private:
     NeoPatterns neoPatterns;
     static std::map<uint8_t, Patterns *> pInstances;
+    std::vector<uint8_t> sequences;
 
-    int8_t overrideState = NO_OVERRIDE;
-    int8_t sState = -1;
+    std::size_t overrideIndex = NO_OVERRIDE;
+    std::size_t sequenceIndex = -1;
+    bool beingRandom;
 
 
   public:
@@ -24,9 +39,13 @@ class Patterns{
     void setOverride();
     void incrementOverride();
     bool isOverriding();
-    void setRandom();
+    void resetOverride();
 
     void patternsCallback(NeoPatterns *aLedsPtr);
+    void addSequence(uint8_t sequence);
+    void addAllSequences();
+
+    void setBeingRandom(boolean being) { beingRandom = being;}
 
     static Patterns *instance(uint8_t pin){
       return Patterns::pInstances[pin];
