@@ -3,22 +3,22 @@
 
 #include <Arduino.h>
 #include <NeoPatterns.h>
+#include <map>
 
-#define NUM_LEDS 5
-#define LED_PIN D4
-#define NUM_SEQUENCES 10
+#define NUM_SEQUENCES 11
 #define NO_OVERRIDE -1
 
 class Patterns{
   private:
     NeoPatterns neoPatterns;
-    static Patterns *pInstance;
+    static std::map<uint8_t, Patterns *> pInstances;
 
     int8_t overrideState = NO_OVERRIDE;
     int8_t sState = -1;
 
+
   public:
-    Patterns();
+    Patterns(uint8_t ledPin, uint8_t numLeds, uint8_t flags);
     void begin();
     void update();
     void setOverride();
@@ -28,8 +28,8 @@ class Patterns{
 
     void patternsCallback(NeoPatterns *aLedsPtr);
 
-    static Patterns *instance(){
-      return Patterns::pInstance;
+    static Patterns *instance(uint8_t pin){
+      return Patterns::pInstances[pin];
     }
 };
 

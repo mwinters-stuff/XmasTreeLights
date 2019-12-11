@@ -1,16 +1,20 @@
 #include <functional>
 #include <patterns.h>
 
-Patterns *Patterns::pInstance;
+std::map<uint8_t, Patterns *> Patterns::pInstances;
 
 void neoPatternsCallback(NeoPatterns *aLedsPtr) {
-  Patterns::instance()->patternsCallback(aLedsPtr);
+  Patterns *instance = Patterns::instance(aLedsPtr->getPin());
+  if(instance != nullptr){
+    instance->patternsCallback(aLedsPtr);
+
+  }
 }
 
-Patterns::Patterns()
-    : neoPatterns(NUM_LEDS, LED_PIN, NEO_RGB + NEO_KHZ800,
+Patterns::Patterns(uint8_t ledPin, uint8_t numLeds, uint8_t flags)
+    : neoPatterns(numLeds, ledPin, flags,
                   neoPatternsCallback) {
-  Patterns::pInstance = this;
+  Patterns::pInstances[ledPin] = this;
 }
 
 void Patterns::begin() {
@@ -52,11 +56,7 @@ void Patterns::patternsCallback(NeoPatterns *aLedsPtr) {
     Serial.println(overrideState);
     sState = overrideState;
   } else {
-    int8_t newState = sState;
-    while(newState == sState){
-      newState = random(NUM_SEQUENCES+1);
-    }
-    sState = newState;
+    sState = random(NUM_SEQUENCES+1);
   }
 
   Serial.print("Pin=");
@@ -67,58 +67,66 @@ void Patterns::patternsCallback(NeoPatterns *aLedsPtr) {
   Serial.print(sState);
 
   switch (sState) {
-  case 0:
-    // Cylon
-    neoPatterns.ScannerExtended(NeoPatterns::Wheel(tColor), 1, tDuration, 10,
-                                FLAG_SCANNER_EXT_CYLON |
-                                    FLAG_SCANNER_EXT_VANISH_COMPLETE);
-    break;
-  case 1:
-    // Heartbeat
-    neoPatterns.Heartbeat(NeoPatterns::Wheel(tColor), tDuration / 2, 10);
-    break;
-  case 2:
-    // rocket and falling star - 2 times bouncing
-    neoPatterns.ScannerExtended(NeoPatterns::Wheel(tColor), 1, tDuration, 10,
-                                FLAG_SCANNER_EXT_ROCKET,
-                                // | FLAG_SCANNER_EXT_START_AT_BOTH_ENDS,
-                                (tDuration & DIRECTION_DOWN));
-    break;
-  case 3:
-    neoPatterns.Stripes(
-        NeoPatterns::Wheel(tColor), 1, NeoPatterns::Wheel(tColor + 0x80), 2,
-        5 * neoPatterns.numPixels(), tDuration * 2, DIRECTION_DOWN);
-    break;
-  case 4:
-
-    neoPatterns.Stripes(
-        NeoPatterns::Wheel(tColor), 2, NeoPatterns::Wheel(tColor + 0x80), 3,
-        5 * neoPatterns.numPixels(), tDuration * 2, DIRECTION_UP);
-    break;
-  case 5:
-    neoPatterns.RainbowCycle(tDuration / 4, (tDuration & DIRECTION_DOWN));
-    break;
-  case 6:
-    neoPatterns.Fade(NeoPatterns::Wheel(tColor),
-                     NeoPatterns::Wheel(tColor + 0x80), 64, tDuration);
-    break;
-  case 7:
-    neoPatterns.ColorWipe(NeoPatterns::Wheel(tColor), tDuration);
-    break;
-  case 8:
-    // clear existing color wipe
-    neoPatterns.ColorWipe(COLOR32_BLACK, tDuration, FLAG_DO_NOT_CLEAR,
-                          DIRECTION_DOWN);
-    break;
-  case 9:
-    // Multiple falling star
-    initMultipleFallingStars(&neoPatterns, COLOR32_WHITE_HALF, 7, tDuration / 2,
-                             3, neoPatternsCallback);
-    break;
-  case 10:
-    neoPatterns.Fire(tDuration * 2, tDuration / 2);
-    // sState = 0; // Start from beginning
-    break;
+    case 0:
+        // Cylon 3 times bouncing
+        aLedsPtr->ScannerExtended(NeoPatterns::Wheel(tColor), 5, tDuration, 3,
+        FLAG_SCANNER_EXT_CYLON | (tDuration & FLAG_SCANNER_EXT_VANISH_COMPLETE), (tColor & DIRECTION_DOWN));
+        break;
+    case 1:
+        // rocket 2 times bouncing
+        aLedsPtr->ScannerExtended(NeoPatterns::Wheel(tColor), 7, tDuration, 2,
+        FLAG_SCANNER_EXT_ROCKET | FLAG_SCANNER_EXT_VANISH_COMPLETE | FLAG_DO_NOT_CLEAR, (tColor & DIRECTION_DOWN));
+        break;
+    case 2:
+        // 1 times rocket or falling star
+        aLedsPtr->ScannerExtended(COLOR32_WHITE_HALF, 7, tDuration / 2, 0, FLAG_SCANNER_EXT_VANISH_COMPLETE,
+                (tColor & DIRECTION_DOWN));
+        break;
+    case 3:
+        // Rainbow cycle
+        aLedsPtr->RainbowCycle(tDuration / 4, (tDuration & DIRECTION_DOWN));
+        break;
+    case 4:
+        // new Stripes
+        aLedsPtr->Stripes(NeoPatterns::Wheel(tColor), 5, NeoPatterns::Wheel(tColor + 0x80), 3, 2 * aLedsPtr->numPixels(),
+                tDuration * 2, (tColor & DIRECTION_DOWN));
+        break;
+    case 5:
+        // old TheaterChase
+        aLedsPtr->Stripes(NeoPatterns::Wheel(tColor), 1, NeoPatterns::Wheel(tColor + 0x80), 2, 2 * aLedsPtr->numPixels(),
+                tDuration * 2, (tColor & DIRECTION_DOWN));
+        break;
+    case 6:
+        // Fade to complement
+        aLedsPtr->Fade(NeoPatterns::Wheel(tColor), NeoPatterns::Wheel(tColor + 0x80), 64, tDuration);
+        break;
+    case 7:
+        // Color wipe DO_NOT_CLEAR
+        aLedsPtr->ColorWipe(NeoPatterns::Wheel(tColor), tDuration, FLAG_DO_NOT_CLEAR, (tColor & DIRECTION_DOWN));
+        break;
+    case 8:
+        // rocket start at both end
+        aLedsPtr->ScannerExtended(NeoPatterns::Wheel(tColor), 7, tDuration / 2, 3,
+        FLAG_SCANNER_EXT_ROCKET | (tDuration & FLAG_SCANNER_EXT_VANISH_COMPLETE) | FLAG_SCANNER_EXT_START_AT_BOTH_ENDS);
+        break;
+    case 9:
+        // 3 Heartbeats
+        aLedsPtr->Heartbeat(NeoPatterns::Wheel(tColor), tDuration / 2, 3);
+        break;
+    case 10:
+        // Multiple falling star
+        initMultipleFallingStars(aLedsPtr, COLOR32_WHITE_HALF, 7, tDuration, 3, &allPatternsRandomHandler);
+        break;
+    case 11:
+        if ((aLedsPtr->PixelFlags & PIXEL_FLAG_GEOMETRY_CIRCLE) == 0) {
+            //Fire
+            aLedsPtr->Fire(tDuration * 2, tDuration / 2);
+        } else {
+            // rocket start at both end
+            aLedsPtr->ScannerExtended(NeoPatterns::Wheel(tColor), 5, tDuration, 0,
+            FLAG_SCANNER_EXT_START_AT_BOTH_ENDS | FLAG_SCANNER_EXT_VANISH_COMPLETE | FLAG_DO_NOT_CLEAR);
+        }
+        break;
   default:
     Serial.println("ERROR");
     break;
