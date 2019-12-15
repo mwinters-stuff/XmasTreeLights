@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <NeoPatterns.h>
+#include <ArduinoJson.h>
 #include <map>
 #include <vector>
 
@@ -31,7 +32,7 @@ class Patterns{
     std::size_t sequenceIndex = -1;
     bool beingRandom;
 
-
+    uint8_t findSequenceIndex(String name);
   public:
     Patterns(uint8_t ledPin, uint8_t numLeds, uint8_t flags);
     void begin();
@@ -50,6 +51,9 @@ class Patterns{
     static Patterns *instance(uint8_t pin){
       return Patterns::pInstances[pin];
     }
+
+    void getJson(JsonObject& doc);
+    void setJson(const JsonObject& doc);
 };
 
 #endif

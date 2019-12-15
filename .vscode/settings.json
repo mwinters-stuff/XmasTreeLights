@@ -3,5 +3,9 @@
     "activityBar.background": "#3A2835",
     "titleBar.activeBackground": "#51384A",
     "titleBar.activeForeground": "#FBFAFB"
+  },
+  "files.associations": {
+    "*.h": "c",
+    "functional": "cpp"
   }
 }
