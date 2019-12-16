@@ -5,7 +5,21 @@
     "titleBar.activeForeground": "#FBFAFB"
   },
   "files.associations": {
+    "SVR_LOG*.txt": "log",
+    "WEBSVR_LOG*.txt": "log",
+    "CANSERVER_*.txt": "log",
+    "SENSORSIM_*.txt": "log",
+    "syslog": "log",
+    "syslog.*": "log",
     "*.h": "c",
-    "functional": "cpp"
+    "functional": "cpp",
+    "array": "cpp",
+    "deque": "cpp",
+    "list": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "vector": "cpp",
+    "initializer_list": "cpp",
+    "regex": "cpp"
   }
 }

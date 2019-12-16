@@ -5,13 +5,13 @@
 #include <DNSServer.h>
 #ifdef ESP32
 #include <AsyncTCP.h>
-#include <WiFi.h>
-#include <SPIFFS.h>
 #include <ESPmDNS.h>
+#include <SPIFFS.h>
+#include <WiFi.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
-#include <ESPAsyncTCP.h>
 #include <ESP8266mDNS.h>
+#include <ESPAsyncTCP.h>
 #endif
 #include <AsyncJson.h>
 #include <ESPAsyncWebServer.h>
@@ -21,22 +21,24 @@ AsyncWebServer server(80);
 #include "patterns.h"
 
 Patterns treePatterns(D4, 10, NEO_RGB | NEO_KHZ800);
-Patterns ringPatterns(D1, 24, NEO_GBR | NEO_KHZ800 | PIXEL_FLAG_GEOMETRY_CIRCLE);
+Patterns ringPatterns(D1, 24,
+                      NEO_GBR | NEO_KHZ800 | PIXEL_FLAG_GEOMETRY_CIRCLE);
 ESP8266DebounceSwitch switches;
 
 class CaptiveRequestHandler : public AsyncWebHandler {
- public:
+public:
   CaptiveRequestHandler() {}
   virtual ~CaptiveRequestHandler() {}
 
   bool canHandle(AsyncWebServerRequest *request) {
     // request->addInterestingHeader("ANY");
-    Serial.println(request->url());
-    return request->url() != "/get" && request->url() != "/set" && !request->url().startsWith("/site");
+    // Serial.println(request->url());
+    return request->url() != "/get" && request->url() != "/set" &&
+           !request->url().startsWith("/site");
   }
 
   void handleRequest(AsyncWebServerRequest *request) {
-    request->redirect("/site");
+    request->redirect("/site/index.html");
   }
 };
 
@@ -52,36 +54,38 @@ void onButtonPressed(uint32_t msPressed) {
 
 const char *PARAM_MESSAGE = "message";
 
-AsyncJsonResponse* getResponseJson(String what){
-                AsyncJsonResponse *response = new AsyncJsonResponse();
+AsyncJsonResponse *getResponseJson(String what) {
+  AsyncJsonResponse *response = new AsyncJsonResponse();
 
-              JsonObject root = response->getRoot();
+  JsonObject root = response->getRoot();
 
-              root["heap"] = ESP.getFreeHeap();
-              root["ssid"] = WiFi.SSID();
-              root["ap_address"] = WiFi.softAPIP().toString();
+  root["heap"] = ESP.getFreeHeap();
+  root["ssid"] = WiFi.SSID();
+  root["ap_address"] = WiFi.softAPIP().toString();
 
-
-              if (what == "tree") {
-                treePatterns.getJson(root);
-              } else if (what == "ring") {
-                ringPatterns.getJson(root);
-              }
-              response->setLength();
+  if (what == "tree") {
+    treePatterns.getJson(root);
+  } else if (what == "ring") {
+    ringPatterns.getJson(root);
+  }
+  response->setLength();
   return response;
 }
 
 void setup() {
   Serial.begin(115200);
-
-  WiFi.softAP("x-mas-lights");
+  WiFi.setAutoConnect(false);
+  WiFi.setAutoReconnect(false);
+  ESP.eraseConfig();
+  WiFi.softAP("x-mas-lights",NULL,6);
   dnsServer.start(53, "*", WiFi.softAPIP());
 
-  MDNS.addService("http","tcp",80);
+  // MDNS.addService("http", "tcp", 80);
 
   SPIFFS.begin();
 
-  server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);  // only when requested from AP
+  server.addHandler(new CaptiveRequestHandler())
+      .setFilter(ON_AP_FILTER); // only when requested from AP
 
   server
       .on("/get", HTTP_GET,
@@ -94,24 +98,25 @@ void setup() {
           })
       .setFilter(ON_AP_FILTER);
 
-  AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler("/set", [](AsyncWebServerRequest *request, JsonVariant &json) {
-    const JsonObject &jsonObj = json.as<JsonObject>();
-    if (request->hasArg("what")) {
-      String what = request->arg("what");
+  AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler(
+      "/set", [](AsyncWebServerRequest *request, JsonVariant &json) {
+        const JsonObject &jsonObj = json.as<JsonObject>();
+        if (request->hasArg("what")) {
+          String what = request->arg("what");
 
-      if (what == "tree") {
-        treePatterns.setJson(jsonObj);
-      } else if (what == "ring") {
-        ringPatterns.setJson(jsonObj);
-      }
-      request->send(getResponseJson(what));
-    } else {
-      request->send(404);
-    }
-  });
+          if (what == "tree") {
+            treePatterns.setJson(jsonObj);
+          } else if (what == "ring") {
+            ringPatterns.setJson(jsonObj);
+          }
+          request->send(getResponseJson(what));
+        } else {
+          request->send(404);
+        }
+      });
   server.addHandler(handler).setFilter(ON_AP_FILTER);
 
-  server.serveStatic("/site", SPIFFS, "/web/").setDefaultFile("index.html");
+  server.serveStatic("/site", SPIFFS, "/web/").setDefaultFile("index.html").setFilter(ON_AP_FILTER);
 
   server.begin();
 
@@ -123,13 +128,15 @@ void setup() {
   ringPatterns.addSequence(SEQUENCE_THEATRE_CHASE);
   ringPatterns.addSequence(SEQUENCE_FADE);
   ringPatterns.addSequence(SEQUENCE_COLOUR_WIPE);
-  ringPatterns.addSequence(SEQUENCE_HEARTBEATS);
+  // ringPatterns.addSequence(SEQUENCE_HEARTBEATS);
 
   treePatterns.setBeingRandom(true);
   treePatterns.begin();
   ringPatterns.begin();
 
-  switches.addButtonPin(D5, [&](uint8_t pin, uint32_t msPressed) { onButtonPressed(msPressed); }, true);
+  switches.addButtonPin(
+      D5, [&](uint8_t pin, uint32_t msPressed) { onButtonPressed(msPressed); },
+      true);
 
   Serial.println("started " + WiFi.softAPIP().toString());
 

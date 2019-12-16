@@ -188,7 +188,7 @@ void Patterns::getJson(JsonObject &doc) {
   doc[F("current_index")] = sequenceIndex;
   doc[F("current_name")] = names.at(sequences[sequenceIndex]);
   doc[F("random")] = beingRandom;
-  doc[F("override_index")] = overrideIndex == NO_OVERRIDE ? -1 : overrideIndex;
+  doc[F("override_index")] = (int)(overrideIndex == NO_OVERRIDE ? -1 : overrideIndex);
 
   JsonArray array = doc.createNestedArray("sequences");  // adoc.to<JsonArray>();
   for (uint8_t value : sequences) {
@@ -212,7 +212,8 @@ uint8_t Patterns::findSequenceIndex(String name) {
 
 void Patterns::setJson(const JsonObject &doc) {
   sequenceIndex = doc[F("current_index")];
-  overrideIndex = doc[F("override_index")];
+  int temp = doc[F("override_index")];
+  overrideIndex = temp >= 0 ? doc[F("override_index")] : NO_OVERRIDE;
   beingRandom = doc[F("random")];
   JsonArrayConst array = doc[F("sequences")];
   sequences.clear();
